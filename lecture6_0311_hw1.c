@@ -15,8 +15,8 @@ int main()
         }
 
         printf("Matrix:\n");
-        for (int i = 0, val = 1; i < MATRIX_SIZE; i++) {
-                for (int k = 0; k < MATRIX_SIZE; k++, val++) {
+        for (int i = 0; i < MATRIX_SIZE; i++) {
+                for (int k = 0; k < MATRIX_SIZE; k++) {
                         printf("%d\t", matrix[i][k]);
                 }
                 printf("\n");
