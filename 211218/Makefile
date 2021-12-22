@@ -1,11 +1,21 @@
 NAME_PROJECT := mycalc
 
-all: calc
-
-calc : 211215_hw1.c calc_func.c
-	gcc -o $(NAME_PROJECT) 211215_hw1.c calc_func.c -L./libmycalc/ -l$(NAME_PROJECT) -Wl,-rpath,./libmycalc/
+PATH_OBJ := ./objects/
+SRC := $(wildcard *.c)
+OBJ := $(patsubst %.c, $(PATH_OBJ)%.o, $(SRC))
 
 .PHONY: clean
 
+all: calc
+
+calc : object_dir $(OBJ)
+	gcc -o $(NAME_PROJECT) $(OBJ) -L./libmycalc/ -l$(NAME_PROJECT) -Wl,-rpath,./libmycalc/
+
+object_dir :
+	mkdir -p $(PATH_OBJ)
+
+$(PATH_OBJ)%.o : %.c
+	gcc -c $< -o $@
+
 clean:
-	rm -f $(NAME_PROJECT)
+	rm -rf $(NAME_PROJECT) $(PATH_OBJ)
