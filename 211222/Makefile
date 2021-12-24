@@ -4,7 +4,7 @@ PATH_OBJ := ./objects/
 SRC := $(wildcard *.c)
 OBJ := $(patsubst %.c, $(PATH_OBJ)%.o, $(SRC))
 
-.PHONY: clean all
+.PHONY: clean object_dir all
 
 all: testdl
 

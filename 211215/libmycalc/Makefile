@@ -7,7 +7,7 @@ PATH_SRC := ./source/
 SRC := $(wildcard $(addsuffix *.c, $(PATH_SRC)))
 OBJ := $(patsubst $(PATH_SRC)%.c, $(PATH_OBJ)%.o, $(SRC))
 
-.PHONY: clean object_dir
+.PHONY: clean object_dir all
 
 all : libmycalc.a
 
