@@ -1,4 +1,4 @@
-NAME_PROJECT := mycalc
+NAME_PROJECT := printtest
 NAME_LIB := $(addprefix lib, $(addsuffix .so, $(NAME_PROJECT)))
 
 PATH_OBJ := ./objects/
@@ -9,10 +9,10 @@ OBJ := $(patsubst $(PATH_SRC)%.c, $(PATH_OBJ)%.o, $(SRC))
 
 .PHONY: clean
 
-all : libmycalc.so
+all : libprinttest.so
 
-libmycalc.so : object_dir $(OBJ)
-	gcc -shared -o libmycalc.so $(OBJ)
+libprinttest.so : object_dir $(OBJ)
+	gcc -shared -o $(NAME_LIB) $(OBJ)
 
 object_dir :
 	mkdir -p $(PATH_OBJ)
