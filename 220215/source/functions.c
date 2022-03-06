@@ -5,6 +5,10 @@
 #include "lifeGame.h"
 #include "functions.h"
 
+/**
+ * Функция "покупатель". Одна из поточных функций. Описание в ../README.md
+ * @param arg Принимает структуру, в которой отражена информация о имеющихся магазинах
+ */
 void *iamBuyer(void *arg)
 {
     supply_t *shops = (supply_t *) arg;
@@ -62,7 +66,10 @@ void *iamBuyer(void *arg)
     pthread_exit(NULL);
 }
 
-
+/**
+ * Функция "поставщик". Вторая поточная функция. Описание приведено в ../README.md
+ * @param arg Принимает структуру, в которой отражена информация о имеющихся магазинах
+ */
 void *iamSupplier(void *arg)
 {
     supply_t *shops = (supply_t *) arg;
