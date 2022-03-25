@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
     /* Инициализация двусвязного списка с историей сообщений */
     doublyLinkedList *messages = NULL;
     messages = createDoublyLinkedList();
+    /* Формируется "техническое сообщение", в котором главное поле - name */
     addNewMessageBack(messages, 0, 0, argv[1], "start chat");
 
     pthread_t t2_check_messages;
@@ -70,48 +71,34 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-
     int k = 0;
     pthread_t t_users[MAX_USERS];
-    singlyLinkedList tmp = *users;
 
     for (;k < MAX_USERS; k++) {
-
         status = pthread_mutex_lock(&(users->mtx));
 
         while (users->raw == 0)
             status = pthread_cond_wait(&(users->cnd), &(users->mtx));
 
         db[k].messages = messages;
-        db[k].user = tmp.head;
 
-        while (users->raw > 0) {
-
-            status = pthread_create(&t_users[k], NULL, receiver, &db[k]);
-
-            (users->raw)--;
+        if (users->raw == 1) {
+            db[k].user = *(users->tail);
+        } else {
+            printf("Будут потеряны пользователи. При появлении данного сообщения переработать фрагмент кода\n");
+            printf("Скорее всего, это не будет работать, если 2+ потока будут анализировать 'users'\n");
         }
 
-        tmp.head = tmp.head->next;
+        while (users->raw > 0) {
+            status = pthread_create(&t_users[k], NULL, receiver, &db[k]);
+            (users->raw)--;
+        }
 
         status = pthread_mutex_unlock(&(users->mtx));
     }
 
-    pthread_t t3_receiver;
-    status = pthread_create(&t3_receiver, NULL, receiver, &db[0]);
-    if (status != 0) {
-        printf("ERROR: pthread_create - receiver (main)\n");
-        exit(EXIT_FAILURE);
-    }
-
-
-    status = pthread_join(t1_check_users, NULL);
     status = pthread_join(t2_check_messages, NULL);
-
-    printSinglyLinkedList(users);
-    printSinglyLinkedList(users);
-    printDoublyLinkedList(messages);
-    printDoublyLinkedList(messages);
+    status = pthread_join(t1_check_users, NULL);
 
     status = mq_unlink(room);
     if (status == -1) {

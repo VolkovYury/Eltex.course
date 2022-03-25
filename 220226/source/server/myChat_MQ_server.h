@@ -7,8 +7,9 @@
 #define MAX_ROOMNAME 20
 #define MAX_NICKNAME 20
 
-#define MAX_NUM_MSG 20
-#define MAX_SIZE_MSG 1024
+#define MAX_NUM_MSG 10  /* Может не создать очередь, если будет больше 10. Можно только уменьшать */
+#define MAX_SIZE_MSG 512
+#define MAX_SIZE_DATA 450
 
 #define MAX_USERS 20
 
@@ -26,13 +27,15 @@ typedef struct users_s
 typedef struct _singlyLinkedList
 {
     size_t size;
-    unsigned int raw;
+    unsigned int raw;   /* Необработанные пользователи */
 
     pthread_mutex_t  mtx;
     pthread_cond_t cnd;
 
     users_t *head;
     users_t *tail;
+
+    users_t head_const;
 } singlyLinkedList;
 
 /* Структура для письма */
@@ -41,7 +44,7 @@ typedef struct messages_s
     unsigned int num;
     unsigned int time;
     char nickname[MAX_NICKNAME];
-    char text[900];
+    char text[MAX_SIZE_DATA];
     struct messages_s *next;
     struct messages_s *prev;
 } messages_t;
@@ -49,12 +52,18 @@ typedef struct messages_s
 /* Двусвязный список с сообщениями */
 typedef struct _doublyLinkedList {
     size_t size;
+
+    pthread_mutex_t  mtx;
+    pthread_cond_t cnd;
+
     messages_t *head;
     messages_t *tail;
+
+    messages_t head_const;
 } doublyLinkedList;
 
 typedef struct _database {
-    users_t *user;
+    users_t user;
     doublyLinkedList *messages;
 } database;
 

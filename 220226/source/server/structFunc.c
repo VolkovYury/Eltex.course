@@ -5,40 +5,6 @@
 #include "myChat_MQ_server.h"
 #include "structFunc.h"
 
-/**
- * Печать элементов односвязного списка
- * @param list Указатель на односвязный список
- */
-void printSinglyLinkedList(singlyLinkedList *list)
-{
-    if (list->head == NULL) {
-        printf("Singly linked list is empty!\n");
-    } else {
-        singlyLinkedList tmp = *list;
-        while (tmp.head) {
-            printf("#%d: time - %d, nick - %s\n", tmp.head->num, tmp.head->connectTime, tmp.head->nickname);
-            tmp.head = tmp.head->next;
-        }
-    }
-}
-
-/**
- * Печать элементов двусвязного списка
- * @param list Указатель на двусвязный список
- */
-void printDoublyLinkedList(doublyLinkedList *list)
-{
-    if (list->head == NULL) {
-        printf("Doubly linked list is empty!\n");
-    } else {
-        doublyLinkedList tmp = *list;
-        while (tmp.head) {
-            printf("#%d: time - %d, nick - %s, text - %s\n", tmp.head->num, tmp.head->time, tmp.head->nickname, tmp.head->text);
-            tmp.head = tmp.head->next;
-        }
-    }
-}
-
 /* Функции для работы с односвязным списком */
 /**
  * Инициализация односвязного списка
@@ -124,20 +90,61 @@ void addNewUserBack(singlyLinkedList *list, unsigned int number, unsigned int ti
     strcpy(tmp->nickname, name);
 
     tmp->roomnameReceive[0] = '/';
-    strncat(tmp->roomnameReceive, tmp->nickname, 20);
+    strncat(tmp->roomnameReceive, tmp->nickname, MAX_NICKNAME);
 
     tmp->next = NULL;
 
+    if (list->head == NULL) {
+        list->head = tmp;
+        list->head_const = *tmp;
+    } else {
+
+        /* Если список не пуст и head_const не имеет ссылки на следующее сообщение, т.е. на второе */
+        /* При отсутствии реализации удаления сообщений из структуры - этот if срабатывает только на втором сообщении */
+        if (list->head_const.next == NULL)
+            list->head_const.next = tmp;
+
+    }
+
     if (list->tail)
         list->tail->next = tmp;
-
-    if (list->head == NULL)
-        list->head = tmp;
 
     list->tail = tmp;
     list->size++;
     list->raw++;
 }
+
+/**
+ * Печать элементов односвязного списка
+ * @param list Указатель на односвязный список
+ */
+void printSinglyLinkedList(singlyLinkedList *list)
+{
+    pthread_mutex_lock(&list->mtx);
+
+    if (list->head == NULL) {
+        printf("Singly linked list is empty!\n");
+    } else {
+        singlyLinkedList tmp = *list;
+
+        if (tmp.head->num != tmp.head_const.num) {
+            /* Указатель head не установлен на первый элемент */
+            /* Поэтому сначала выводится реальный первый элемент, а затем устанавливается корректный указатель */
+            printf("#%d: time - %d, nick - %s\n", tmp.head->num, tmp.head->connectTime, tmp.head->nickname);
+            tmp.head = tmp.head_const.next;
+        }
+
+        while (tmp.head) {
+            printf("#%d: time - %d, nick - %s\n", tmp.head->num, tmp.head->connectTime, tmp.head->nickname);
+            tmp.head = tmp.head->next;
+        }
+    }
+
+    pthread_mutex_unlock(&list->mtx);
+}
+
+
+
 
 
 /* Функции для работы с двусвязным списком */
@@ -216,12 +223,55 @@ void addNewMessageBack(doublyLinkedList *list, unsigned int number, unsigned int
     tmp->next = NULL;
     tmp->prev = list->tail;
 
+    /* Если список пуст (отсутствует голова) */
+    if (list->head == NULL) {
+        list->head = tmp;
+        list->head_const = *tmp;
+    } else {
+
+        /* Если список не пуст и head_const не имеет ссылки на следующее сообщение, т.е. на второе */
+        /* При отсутствии реализации удаления сообщений из структуры - этот if срабатывает только на втором сообщении */
+        if (list->head_const.next == NULL)
+            list->head_const.next = tmp;
+
+    }
+
+    /* Изменить в старом хвосте указатель на новый хвост */
     if (list->tail)
         list->tail->next = tmp;
 
-    if (list->head == NULL)
-        list->head = tmp;
-
     list->tail = tmp;
     list->size++;
+}
+
+/**
+ * Печать элементов двусвязного списка
+ * @param list Указатель на двусвязный список
+ */
+void printDoublyLinkedList(doublyLinkedList *list)
+{
+    pthread_mutex_lock(&list->mtx);
+
+    if (list->head == NULL) {
+        printf("Doubly linked list is empty!\n");
+    } else {
+
+        doublyLinkedList tmp = *list;
+
+        if (tmp.head->num != tmp.head_const.num) {
+            /* Указатель head не установлен на первый элемент */
+            /* Поэтому сначала выводится реальный первый элемент, а затем устанавливается корректный указатель */
+            printf("#%d: time - %d, nick - %s, text - %s\n",
+                    tmp.head_const.num, tmp.head_const.time, tmp.head_const.nickname, tmp.head_const.text);
+            tmp.head = tmp.head_const.next;
+        }
+
+        while (tmp.head) {
+            printf("#%d: time - %d, nick - %s, text - %s\n",
+                    tmp.head->num, tmp.head->time, tmp.head->nickname, tmp.head->text);
+            tmp.head = tmp.head->next;
+        }
+    }
+
+    pthread_mutex_unlock(&list->mtx);
 }
