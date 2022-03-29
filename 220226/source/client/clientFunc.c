@@ -1,55 +1,35 @@
 #include <mqueue.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdio.h>
 
 #include "myChat_MQ_client.h"
+#include "interfaceFunctions.h"
 #include "clientFunc.h"
 
 /**
- * Регистрация клиента: формирование пользовательской конфигурации, создание/подключение к очередям сообщений
- * @param user Указатель на структуру с конфигурацией пользователя
- */
-void registerClient(userConf *user)
-{
-    /* Получение ника. Пользовательский ввод (scanf) */
-    setNickname(user);
-
-    /* Создание очереди для получения сообщений */
-    createQueueReceiveMsg(user);
-
-    /* Получение названия комнаты чата. Пользовательский ввод (scanf) */
-    setRoomName(user);
-
-    /* Подключение к очереди для отправки сообщений */
-    openQueueSendMsg(user);
-
-    /* Отправка ника в очередь "users" для регистрации на сервере */
-    sendNickname(user);
-
-    /* Вывод окна об успешной регистрации в системе */
-    printf("Connect successful!\n");
-}
-
-/**
  * Получение ника клиента. Формирование структуры конфигурации - часть 1 из 5.
+ * Создание очереди для получения сообщений от сервера. Формирование структуры конфигурации - часть 2,3 из 5.
  * @param user Указатель на структуру с конфигурацией пользователя
  */
-void setNickname(userConf *user)
+void setUsername(userConfig *user, windowConfig *win)
 {
+    /* Получение ника */
     char *name = (char *) malloc(MAX_NICKNAME *sizeof(char));
-    if (name == NULL) {
-        perror("ERROR: malloc - name (setNickname)");
-        exit(EXIT_FAILURE);
-    }
-    printf("Enter name (Latin letters and numbers, no special characters, %d characters maximum): ", MAX_NICKNAME);
+    if (name == NULL)
+        myExit("setUsername\0", "malloc - name\0", user);
 
+    mvwprintw(win->workspace, 1, 1, "Enter username");
+    mvwprintw(win->workspace, 3, 1, "Latin letters and numbers, %d characters maximum", MAX_NICKNAME);
+    mvwprintw(win->workspace, 5, 1, "UN: ");
+
+    /* Флаг "имя корректно" */
     int nameCorrect = 0;
     while (!nameCorrect) {
-        scanf("%s", name);
-        char clr;
-        while((clr = (char) getchar()) != '\n' && clr != EOF ); /* Очистка stdin */
+        mvwprintw(win->workspace, 5, 5, "                    ");    /* Очистка поля для ввода */
+        wrefresh(win->workspace);
+        mvwgetnstr(win->workspace, 5, 5, name, MAX_NICKNAME);
 
         int i;
         for (i = 0; name[i] != '\0'; i++) {
@@ -58,29 +38,19 @@ void setNickname(userConf *user)
                 nameCorrect = 1;
                 continue;
             } else {
-                printf("The name contains an invalid character: %c\n", name[i]);
-                printf("Try again: ");
+                /* Очистка поля для логов */
+                mvwprintw(win->workspace, 16, 1, "                                                            ");
+                mvwprintw(win->workspace, 16, 1, "LOG: The name contains an invalid character: %c. Try again!", name[i]);
                 nameCorrect = 0;
                 break;
             }
         }
-
-        if (nameCorrect) {
-            break;
-        }
     }
 
-    strcpy(user->nickname, name);
-    printf("system: Current nickname: %s\n", user->nickname);
-    free(name);
-}
 
-/**
- * Создание очереди для получения сообщений от сервера. Формирование структуры конфигурации - часть 2,3 из 5.
- * @param user Указатель на структуру с конфигурацией пользователя
- */
-void createQueueReceiveMsg(userConf *user)
-{
+    strcpy(user->nickname, name);
+
+    /* Создание очереди */
     user->roomNameReceive[0] = '/';
     strncat(user->roomNameReceive, user->nickname, 20);
 
@@ -91,32 +61,34 @@ void createQueueReceiveMsg(userConf *user)
     attr.mq_curmsgs = 0;
 
     user->queueReceiveMsg = mq_open(user->roomNameReceive, O_RDONLY | O_CREAT | O_EXCL, 0666, &attr);
-    if (user->queueReceiveMsg == (mqd_t) -1) {
-        perror("ERROR: mq_open (createQueueReceiveMsg)");
-        exit(EXIT_FAILURE);
-    }
+    if (user->queueReceiveMsg == (mqd_t) -1)
+        myExit("setUsername\0", "mq_open\0", user);
 
-    printf("system: Message queue (receive) created: mqd_t - %d\n", user->queueReceiveMsg);
+    free(name);
 }
 
 /**
  * Получение названия комнаты чата. Формирование структуры конфигурации - часть 4 из 5.
+ * Подключение к очереди для отправки сообщений на сервер. Формирование структуры конфигурации - часть 5 из 5.
  * @param user Указатель на структуру с конфигурацией пользователя
  */
-void setRoomName(userConf *user)
+void setRoomName(userConfig *user, windowConfig *win)
 {
+    /* Получение названия комнаты */
     char *room = (char *) malloc(MAX_ROOMNAME *sizeof(char));
-    if (room == NULL) {
-        perror("ERROR: malloc - room (setRoomName)");
-        exit(EXIT_FAILURE);
-    }
-    printf("Enter room name (Latin letters and numbers, no special characters, %d characters maximum): ", MAX_ROOMNAME);
+    memset(room, 0x00, MAX_ROOMNAME);
+    if (room == NULL)
+        myExit("setRoomName\0", "malloc - room\0", user);
+
+    mvwprintw(win->workspace, 8, 1, "Enter room name");
+    mvwprintw(win->workspace, 10, 1, "Latin letters and numbers, %d characters maximum", MAX_ROOMNAME);
+    mvwprintw(win->workspace, 12, 1, "RN: ");
 
     int roomCorrect = 0;
     while (!roomCorrect) {
-        scanf("%s", room);
-        char clr;
-        while((clr = (char) getchar()) != '\n' && clr != EOF ); /* Очистка stdin */
+        mvwprintw(win->workspace, 12, 5, "                    ");
+        wrefresh(win->workspace);
+        mvwgetnstr(win->workspace, 12, 5, room, MAX_ROOMNAME);
 
         int i;
         for (i = 0; room[i] != '\0'; i++) {
@@ -125,56 +97,44 @@ void setRoomName(userConf *user)
                 roomCorrect = 1;
                 continue;
             } else {
-                printf("The room name contains an invalid character: %c\n", room[i]);
-                printf("Try again: ");
+                mvwprintw(win->workspace, 16, 1, "                                                            ");
+                mvwprintw(win->workspace, 16, 1, "LOG: The room name contains an invalid character: %c. Try again!", room[i]);
                 roomCorrect = 0;
                 break;
             }
         }
-
-        if (roomCorrect) {
-            break;
-        }
     }
 
+    /* Подключение к очереди */
     user->roomNameSend[0] = '/';
     strncat(user->roomNameSend, room, 20);
+
+    user->queueSendMsg = mq_open(user->roomNameSend, O_WRONLY);
+    if (user->queueSendMsg == (mqd_t) -1)
+        myExit("setRoomName\0", "mq_open\0", user);
+
     free(room);
 }
 
 /**
- * Подключение к очереди для отправки сообщений на сервер. Формирование структуры конфигурации - часть 5 из 5.
+ * Регистрация клиента: Отправка ника данного пользователя на сервер для регистрации.
  * @param user Указатель на структуру с конфигурацией пользователя
  */
-void openQueueSendMsg(userConf *user)
-{
-    user->queueSendMsg = mq_open(user->roomNameSend, O_WRONLY);
-    if (user->queueReceiveMsg == (mqd_t) -1) {
-        perror("ERROR: mq_open (openQueueSendMsg)");
-        exit(EXIT_FAILURE);
-    }
-    printf("system: Message queue (send) created: mqd_t - %d\n", user->queueSendMsg);
-}
-
-/**
- * Отправка ника данного пользователя на сервер для регистрации.
- * @param user Указатель на структуру с конфигурацией пользователя
- */
-void sendNickname(userConf *user)
+void clientRegistration(userConfig *user)
 {
     mqd_t mq_users;
     mq_users = mq_open("/users", O_WRONLY);
-    if (mq_users == (mqd_t) -1) {
-        perror("ERROR: mq_open (sendNickname)");
-        exit(EXIT_FAILURE);
-    }
+    if (mq_users == (mqd_t) -1)
+        myExit("clientRegistration\0", "mq_open\0", user);
 
     int status;
     status = mq_send(mq_users, user->nickname, MAX_NICKNAME, 0);
-    if (status < 0) {
-        perror("ERROR: mq_send (sendNickname)");
-        exit(EXIT_FAILURE);
-    }
+    if (status < 0)
+        myExit("clientRegistration\0", "mq_send\0", user);
+
+    status = mq_close(mq_users);
+    if (status < 0)
+        myExit("clientRegistration\0", "mq_close\0", user);
 }
 
 /**
@@ -183,47 +143,47 @@ void sendNickname(userConf *user)
  */
 void *receiveMsgs(void *arg)
 {
-    userConf *tmp = arg;
+    configuration *tmp = arg;
 
     mqd_t mq_receiveMsg;
-    mq_receiveMsg = mq_open(tmp->roomNameReceive, O_RDONLY);
-    if (mq_receiveMsg == (mqd_t) -1)  {
-        perror("ERROR: mq_open (receiveMsgs)");
-        exit(EXIT_FAILURE);
-    }
+    mq_receiveMsg = mq_open(tmp->user->roomNameReceive, O_RDONLY);
+    if (mq_receiveMsg == (mqd_t) -1)
+        myExit("receiveMsgs\0", "mq_open\0", tmp->user);
+
 
     int status;
     struct mq_attr attr;
     status = mq_getattr(mq_receiveMsg, &attr);
-    if (status < 0) {
-        perror("ERROR: mq_getattr (receiveMsgs)");
-        exit(EXIT_FAILURE);
-    }
+    if (status < 0)
+        myExit("receiveMsgs\0", "mq_getattr\0", tmp->user);
 
-    char *buffer;
-    buffer = malloc(attr.mq_msgsize * sizeof(char));
-    if (buffer == NULL) {
-        perror("ERROR: malloc - buffer (f: receiveMsgs)");
-        exit(EXIT_FAILURE);
-    }
+
+    char *buffer = malloc(attr.mq_msgsize * sizeof(char));
+    if (buffer == NULL)
+        myExit("receiveMsgs\0", "malloc - buffer\0", tmp->user);
 
     char *timeSend = (char *) malloc(10 * sizeof(char));
-    if (timeSend == NULL) {
-        perror("ERROR: malloc - timeSend (f: receiveMsgs)");
-        exit(EXIT_FAILURE);
-    }
+    if (timeSend == NULL)
+        myExit("receiveMsgs\0", "malloc - timeSend\0", tmp->user);
 
     char *nickname = (char *) malloc(MAX_NICKNAME * sizeof(char));
-    if (nickname == NULL) {
-        perror("ERROR: malloc - nickname (f: receiveMsgs)");
-        exit(EXIT_FAILURE);
-    }
+    if (nickname == NULL)
+        myExit("receiveMsgs\0", "malloc - nickname\0", tmp->user);
 
-    char *text;
-    text = malloc(MAX_SIZE_DATA * sizeof(char));
-    if (text == NULL) {
-        perror("ERROR: malloc - text (f: receiveMsgs)");
-        exit(EXIT_FAILURE);
+    char *text = malloc(MAX_SIZE_DATA * sizeof(char));
+    if (text == NULL)
+        myExit("receiveMsgs\0", "malloc - text\0", tmp->user);
+
+    /* Массив строк рабочей области */
+    /* char spaceStr[tmp->chat_win->size_y - 4][tmp->chat_win->size_x - 2]; */
+
+    /* Память под строки в рабочей области */
+    char **spaceStr = (char **) malloc ((tmp->chat_win->size_y - 4) * sizeof(char *));
+    int i = 0;
+    for (;i < tmp->chat_win->size_y - 4; i++) {
+        char *str = (char *) malloc ((tmp->chat_win->size_x - 2) * sizeof(char));
+        memset(str, ' ', tmp->chat_win->size_x - 2);
+        spaceStr[i] = str;
     }
 
     ssize_t len;
@@ -236,12 +196,20 @@ void *receiveMsgs(void *arg)
 
         len = mq_receive(mq_receiveMsg, buffer, attr.mq_msgsize, NULL);
         if (len < 0) {
-            perror("ERROR: mq_receive (receiveMsgs)");
-            exit(EXIT_FAILURE);
-        } else {
-            parseMessage(buffer, timeSend, nickname, text);
-            printf("%s: %s (%s)\n", nickname, text, timeSend);
+            myExit("receiveMsgs\0", "mq_receive\0", tmp->user);
+            break; /* Нужен для того, чтобы IDE не подсвечивала Endless loop*/
         }
+
+        parseMessage(buffer, timeSend, nickname, text);
+        buildMsgSpace(nickname, timeSend, text, tmp, spaceStr);
+
+        int k = 0;
+        wclear(tmp->chat_win->workspace);
+        for (; k < tmp->chat_win->size_y - 4; k++) {
+            mvwprintw(tmp->chat_win->workspace, k, 0, spaceStr[k]);
+            wrefresh(tmp->chat_win->workspace);
+        }
+
         count++;
     }
 }
@@ -274,43 +242,163 @@ void parseMessage(const char *buffer, char *time, char *nick, char *text)
 }
 
 /**
+ * Функция построения структуры поля с сообщениями
+ * @param nick Имя пользователя - отправителя сообщения
+ * @param time Время отправки сообщения
+ * @param text Текст сообщения
+ * @param config Указатель на структуру с полной конфигурацией
+ * @param space_str Указатель на массив строк, представляющий собой рабочее полотно
+ */
+void buildMsgSpace(const char *nick, const char *time, char *text, configuration *config, char **space_str)
+{
+    int maxStrLength = 70;  /* Если изменить эту константу, то надо подправить функции snprintf */
+    int sizeText = strlen(text);
+    int numStrText = sizeText/maxStrLength+1;
+    int numStr = 1 + numStrText + 2;
+
+    /* флаг "клиент - автор сообщения" */
+    int self_send;
+    if (strcmp(config->user->nickname, nick) == 0) {
+        self_send = 1;
+    } else {
+        self_send = 0;
+    }
+
+    char *tmp = (char *) malloc ((config->chat_win->size_x - 2) *sizeof(char));
+
+
+    char **msgStruct = (char **) malloc ((numStr) *sizeof(char *));
+    int i, k;
+    for (i = 0, k = 1; i < numStr; i++) {
+        char *msgStr = (char *) malloc ((config->chat_win->size_x - 2) *sizeof(char));
+        memset(msgStr, ' ', config->chat_win->size_x - 2);
+
+        if (i == 0) {
+            /* Если "отправляю" сообщение себе, то выравниваю по правому краю */
+            memset(tmp, ' ', config->chat_win->size_x - 2);
+            snprintf(tmp, config->chat_win->size_x - 2,"%s: (send time: %10s)", nick, time);
+
+            if (self_send == 1) {
+                snprintf(msgStr, config->chat_win->size_x - 2,"%112s", tmp);
+            } else {
+                snprintf(msgStr, config->chat_win->size_x - 2,"%s", tmp);
+            }
+        }
+
+        if (i > 0 && i < numStrText) {
+
+            if (self_send == 1) {
+                snprintf(msgStr, config->chat_win->size_x - 2,"%112s", text + maxStrLength * (k-1));
+            } else {
+                snprintf(msgStr, config->chat_win->size_x - 2,"%s", text + maxStrLength * (k-1));
+            }
+
+            k++;
+        }
+
+        if (i == numStrText) {
+            if (self_send == 1) {
+                /* BAG#1. Настроить выравнивание последней строки. Сейчас при отправке себе - выравнивается по правому краю */
+                snprintf(msgStr, config->chat_win->size_x - 2,"%112s", text + maxStrLength * (k-1));
+            } else {
+                snprintf(msgStr, config->chat_win->size_x - 2,"%s", text + maxStrLength * (k-1));
+            }
+        }
+
+        if (i > numStrText) {
+            memset(msgStr, ' ', config->chat_win->size_x - 2);
+        }
+
+        msgStruct[i] = msgStr;
+    }
+
+    i = 0;
+    for (; i < config->chat_win->size_y - 4  - numStr; i++) {
+        memset(space_str[i], ' ', (maxStrLength + 1));
+        strcpy(space_str[i], space_str[i + numStr]);
+    }
+    k = 0;
+    for (; i < config->chat_win->size_y - 4; i++, k++) {
+        memset(space_str[i], ' ', (maxStrLength + 1));
+        strcpy(space_str[i], msgStruct[k]);
+    }
+
+    i = 0;
+    free(tmp);
+    for (; i < numStr; i++) {
+        free(msgStruct[i]);
+    }
+    free(msgStruct);
+}
+
+/**
  * Поточная функция. Отправляет сообщения на сервер в специальную очередь (название комнаты чата)
  * @param arg Указатель на структуру с конфигурацией пользователя
  */
 void *sendMsgs(void *arg)
 {
-    userConf *tmp = arg;
+    configuration *tmp = arg;
 
     char *buffer = (char *) malloc (MAX_SIZE_MSG * sizeof(char));
-    if (buffer == NULL) {
-        perror("ERROR: malloc - buffer (f: sendMsgs)");
-        exit(EXIT_FAILURE);
-    }
+    if (buffer == NULL)
+        myExit("sendMsgs\0", "malloc - buffer\0", tmp->user);
 
     char *text = (char *) malloc (MAX_SIZE_DATA * sizeof(char));
-    if (text == NULL) {
-        perror("ERROR: malloc - text (f: sendMsgs)");
-        exit(EXIT_FAILURE);
-    }
+    if (text == NULL)
+        myExit("sendMsgs\0", "malloc - text\0", tmp->user);
 
     char delim[1] = ":";
 
+
     while (1) {
-        fgets(text, MAX_SIZE_DATA, stdin);
+        wrefresh(tmp->textLabel_win->workspace);
+        mvwprintw(tmp->textLabel_win->workspace, 0, 0, ">> ");
+        mvwgetnstr(tmp->textLabel_win->workspace, 0, 3, text, MAX_SIZE_DATA);
 
         char timeSend[10];
         sprintf(timeSend, "%d", (int) time(NULL));
         strcpy(buffer, timeSend);
         strncat(buffer, delim, 1);
-        strncat(buffer, tmp->nickname, MAX_NICKNAME);
+        strncat(buffer, tmp->user->nickname, MAX_NICKNAME);
         strncat(buffer, delim, 1);
-        strncat(buffer, text, strlen(text) - 1);
+        strncat(buffer, text, strlen(text));
 
         int status;
-        status = mq_send(tmp->queueSendMsg, buffer, MAX_SIZE_MSG, 0);
+        status = mq_send(tmp->user->queueSendMsg, buffer, MAX_SIZE_MSG, 0);
         if (status < 0) {
-            perror("ERROR: mq_send (sendMsgs)");
-            exit(EXIT_FAILURE);
+            myExit("sendMsgs\0", "mq_send\0", tmp->user);
+            break;  /* Нужен для того, чтобы IDE не подсвечивала Endless loop*/
         }
+        werase(tmp->textLabel_win->workspace);
     }
+}
+
+/**
+ * Функция выхода
+ * @param funcName Название функции. Для справки
+ * @param textError Текст ошибки. Для справки
+ * @param user Указатель на структуру с конфигурацией пользователя
+ */
+void myExit(char *funcName, char *textError, userConfig *user)
+{
+    endwin();
+    printf("%s: ERROR - %s\n", funcName, textError);
+
+    /* При закрытии сигналом очереди не будут удалены */
+    if (user != NULL) {
+        mq_close(user->queueSendMsg);
+        mq_close(user->queueReceiveMsg);
+        mq_unlink(user->roomNameReceive);
+    }
+
+    exit(EXIT_FAILURE);
+}
+
+/**
+ * Обработчик сигналов. Обрабатывает SIGWINCH и SIGILL
+ * @param sig Идентификационный номер сигнала
+ */
+void sig_winch(int sig)
+{
+    myExit("none\0", "signal\0", NULL);
 }

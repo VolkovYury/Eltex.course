@@ -128,6 +128,8 @@ void *checkMessages(void *arg)
             exit(EXIT_FAILURE);
         } else {
             /* Парсинг буфера на элементы по маске "time:nickname:text" */
+            printf("MSG: %s\n", buffer);
+
             parseMessage(buffer, timeSend, nickname, text);
 
             pthread_mutex_lock(&((doublyLinkedList *) arg)->mtx);
@@ -184,11 +186,13 @@ void *receiver(void *arg)
 
             currentMsg = currentMsg->next;
 
-            /* Если автор сообщения совпадает с обрабатываемым пользователем, то ему не надо пересылать отправленное им же сообщение */
+            /* Если автор сообщения совпадает с обрабатываемым пользователем, то ему не надо пересылать отправленное им же сообщение.
+             * С ncurses - надо.
             if (strcmp(tmp->user.nickname, currentMsg->nickname) == 0) {
                 total++;
                 continue;
             }
+            */
 
             sprintf(time, "%d", currentMsg->time);
             strcpy(buffer, time);

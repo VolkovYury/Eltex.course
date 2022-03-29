@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     int k = 0;
     pthread_t t_users[MAX_USERS];
 
-    for (;k < MAX_USERS; k++) {
+    for (; k < MAX_USERS; k++) {
         status = pthread_mutex_lock(&(users->mtx));
 
         while (users->raw == 0)

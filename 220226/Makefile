@@ -20,7 +20,7 @@ server : object_dir_server $(OBJ_SERVER)
 	gcc -o myServer $(OBJ_SERVER) -g -Wall -std=c89 -pthread -lrt
 
 client : object_dir_client $(OBJ_CLIENT)
-	gcc -o myClient $(OBJ_CLIENT) -g -Wall -std=c89 -pthread -lrt
+	gcc -o myClient $(OBJ_CLIENT) -g -Wall -std=c89 -pthread -lrt -lncurses -lpanel
 
 object_dir_server :
 	mkdir -p $(PATH_OBJ_SERVER)
@@ -32,7 +32,7 @@ $(PATH_OBJ_SERVER)%.o : $(PATH_SRC_SERVER)%.c
 	gcc -c $< -o $@ -g -std=c89 -pthread -lrt
 
 $(PATH_OBJ_CLIENT)%.o : $(PATH_SRC_CLIENT)%.c
-	gcc -c $< -o $@ -g -std=c89 -pthread -lrt
+	gcc -c $< -o $@ -g -std=c89 -pthread -lrt -lncurses -lpanel
 
 clean:
 	rm -rf myServer myClient ./objects/
