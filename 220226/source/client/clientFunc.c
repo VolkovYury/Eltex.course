@@ -174,8 +174,6 @@ void *receiveMsgs(void *arg)
     if (text == NULL)
         myExit("receiveMsgs\0", "malloc - text\0", tmp->user);
 
-    /* Массив строк рабочей области */
-    /* char spaceStr[tmp->chat_win->size_y - 4][tmp->chat_win->size_x - 2]; */
 
     /* Память под строки в рабочей области */
     char **spaceStr = (char **) malloc ((tmp->chat_win->size_y - 4) * sizeof(char *));
@@ -184,6 +182,16 @@ void *receiveMsgs(void *arg)
         char *str = (char *) malloc ((tmp->chat_win->size_x - 2) * sizeof(char));
         memset(str, ' ', tmp->chat_win->size_x - 2);
         spaceStr[i] = str;
+    }
+
+    /* Память под подключенных пользователей */
+    int sizeList = 0;
+    char **usersList = (char **) malloc(MAX_NUM_USERS *sizeof(char *));
+    i = 0;
+    for (; i < MAX_NUM_USERS; i++) {
+        char *connectedUser = (char *) malloc(MAX_NICKNAME *sizeof(char));
+        memset(connectedUser, '\0', MAX_NICKNAME);
+        usersList[i] = connectedUser;
     }
 
     ssize_t len;
@@ -201,12 +209,24 @@ void *receiveMsgs(void *arg)
         }
 
         parseMessage(buffer, timeSend, nickname, text);
+
+        status = checkUser(usersList, &sizeList, nickname);
+        if (status == 1) {
+            int str = 0;
+            wclear(tmp->users_win->workspace);
+
+            for (; str < sizeList; str++) {
+                mvwprintw(tmp->users_win->workspace, str, 0, "%s", usersList[str]);
+                wrefresh(tmp->users_win->workspace);
+            }
+        }
+
         buildMsgSpace(nickname, timeSend, text, tmp, spaceStr);
 
         int k = 0;
         wclear(tmp->chat_win->workspace);
         for (; k < tmp->chat_win->size_y - 4; k++) {
-            mvwprintw(tmp->chat_win->workspace, k, 0, spaceStr[k]);
+            mvwprintw(tmp->chat_win->workspace, k, 0, "%s", spaceStr[k]);
             wrefresh(tmp->chat_win->workspace);
         }
 
@@ -239,6 +259,28 @@ void parseMessage(const char *buffer, char *time, char *nick, char *text)
     for(; buffer[i] != '\0';) {
         text[k++] = buffer[i++];
     }
+}
+
+/**
+ * Функция анализирует массив с информацией о всех подключенных пользователях
+ * @param usersList Указатель на массив с подключенными пользователями
+ * @param sizeList Размер списка
+ * @param username Текущий анализируемый пользователь
+ * @return Если пользователь есть в списке - 0, иначе - 1
+ */
+int checkUser(char **usersList, int *sizeList, const char *username)
+{
+    int status;
+    int i = 0;
+    for (; i < *sizeList; i++) {
+        status = strcmp(usersList[i], username);
+        if (status == 0)
+            return 0;
+    }
+    strcpy(usersList[*sizeList], username);
+    ++(*sizeList);
+
+    return 1;
 }
 
 /**

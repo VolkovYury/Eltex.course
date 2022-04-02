@@ -9,6 +9,7 @@ void clientRegistration(userConfig *user);
 
 void *receiveMsgs(void *arg);
 void parseMessage(const char *buffer, char *time, char *nick, char *text);
+int checkUser(char **usersList, int *sizeList, const char *username);
 void buildMsgSpace(const char *nick, const char *time, char *text, configuration *config, char **space_str);
 void *sendMsgs(void *arg);
 

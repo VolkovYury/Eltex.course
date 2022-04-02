@@ -93,6 +93,7 @@ int main()
     config->chat_win = chat;
     config->textLabel_win = textLabel;
     config->users_win = users;
+    config->numUsers = 0;
 
 
     /* Поток 1. Прослушивание сообщений в очереди */

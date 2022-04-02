@@ -6,6 +6,7 @@
 
 #define MAX_ROOMNAME 20
 #define MAX_NICKNAME 20
+#define MAX_NUM_USERS 20
 
 #define MAX_NUM_MSG 10  /* Может не создать очередь, если будет больше 10. Можно только уменьшать */
 #define MAX_SIZE_MSG 512
@@ -34,13 +35,12 @@ typedef struct _windowConfiguration
 
     WINDOW *decoration;
     WINDOW *workspace;
-    PANEL *panel;
-
-    int panelHide;
 } windowConfig;
 
 typedef struct _configuration
 {
+    int numUsers;
+    char allUsers[MAX_NUM_USERS][MAX_NICKNAME];
     userConfig *user;
     windowConfig *chat_win;
     windowConfig *textLabel_win;

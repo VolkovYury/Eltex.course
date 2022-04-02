@@ -186,14 +186,6 @@ void *receiver(void *arg)
 
             currentMsg = currentMsg->next;
 
-            /* Если автор сообщения совпадает с обрабатываемым пользователем, то ему не надо пересылать отправленное им же сообщение.
-             * С ncurses - надо.
-            if (strcmp(tmp->user.nickname, currentMsg->nickname) == 0) {
-                total++;
-                continue;
-            }
-            */
-
             sprintf(time, "%d", currentMsg->time);
             strcpy(buffer, time);
             strncat(buffer, delim, 1);
